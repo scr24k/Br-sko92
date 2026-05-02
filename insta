@@ -1,0 +1,539 @@
+[[
+    IceHub GUI - Reconstructed from Event Logs
+    Decompiled & Reconstructed by Claude
+    Target Game: Roblox (likely "Balloon" game based on feature context)
+    
+    Features:
+      - Draggable main frame
+      - "INSTA RESET" button (teleports player to CraftingMachine, resets humanoid state)
+      - Settings panel (toggle: Reset on Balloon)
+      - Minimize ("-") button
+      - Settings gear/menu button
+      - Discord watermark
+--]]
+
+-- ─────────────────────────────────────────────
+--  SERVICES
+-- ─────────────────────────────────────────────
+local Players         = game:GetService("Players")
+local TweenService    = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService      = game:GetService("RunService")
+local CoreGui         = game:GetService("CoreGui")
+
+local LocalPlayer  = Players.LocalPlayer
+local PlayerGui    = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ─────────────────────────────────────────────
+--  CONSTANTS / THEME
+-- ─────────────────────────────────────────────
+local ACCENT      = Color3.new(0.176471, 0.490196, 1)        -- #2D7DFF
+local ACCENT_SOFT = Color3.new(0.470588, 0.705882, 1)        -- #78B4FF
+local BG_DARK     = Color3.new(0, 0, 0)                      -- #000000
+local BG_PANEL    = Color3.new(0.0156863, 0.0156863, 0.0470588) -- #04040C
+local BG_ITEM     = Color3.new(0.0313726, 0.0470588, 0.109804)  -- #080C1C
+local TOGGLE_OFF  = Color3.new(0.215686, 0.235294, 0.305882)    -- #373C4E
+local TEXT_DIM    = Color3.new(0.588235, 0.686275, 0.901961)    -- #96AFE6
+local TEXT_OFF    = Color3.new(0.254902, 0.294118, 0.411765)    -- #414B69
+
+local TWEEN_INFO_FAST   = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_INFO_PANEL  = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- ─────────────────────────────────────────────
+--  DESTROY OLD GUI (prevent duplicates)
+-- ─────────────────────────────────────────────
+local existingGui = CoreGui:FindFirstChild("IceHubGui")
+if existingGui then existingGui:Destroy() end
+
+-- ─────────────────────────────────────────────
+--  ROOT SCREENGUI
+-- ─────────────────────────────────────────────
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name             = "IceHubGui"
+ScreenGui.ResetOnSpawn     = false
+ScreenGui.IgnoreGuiInset   = true
+ScreenGui.DisplayOrder     = 999
+ScreenGui.Parent           = CoreGui
+
+-- ─────────────────────────────────────────────
+--  MAIN FRAME
+-- ─────────────────────────────────────────────
+local MainFrame = Instance.new("Frame")
+MainFrame.Name                = "Frame"
+MainFrame.Size                = UDim2.new(0, 230, 0, 150)
+MainFrame.Position            = UDim2.new(0.5, -115, 0.75, -75)
+MainFrame.BackgroundColor3    = BG_DARK
+MainFrame.BorderSizePixel     = 0
+MainFrame.ClipsDescendants    = true
+MainFrame.Parent              = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color        = ACCENT
+MainStroke.Transparency = 0.65
+MainStroke.Thickness    = 1
+MainStroke.Parent       = MainFrame
+
+-- ─────────────────────────────────────────────
+--  TITLE LABEL  "ICE HUB"
+-- ─────────────────────────────────────────────
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name                = "TitleLabel"
+TitleLabel.Size                = UDim2.new(0, 110, 0, 26)
+TitleLabel.Position            = UDim2.new(0, 16, 0, 8)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text                = "ICE HUB"
+TitleLabel.Font                = Enum.Font.Gotham
+TitleLabel.TextSize            = 20
+TitleLabel.TextColor3          = ACCENT
+TitleLabel.TextXAlignment      = Enum.TextXAlignment.Left
+TitleLabel.Parent              = MainFrame
+
+-- ─────────────────────────────────────────────
+--  MINIMIZE BUTTON  "-"
+-- ─────────────────────────────────────────────
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name                 = "MinimizeButton"
+MinimizeButton.Size                 = UDim2.new(0, 26, 0, 26)
+MinimizeButton.Position             = UDim2.new(1, -34, 0, 8)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.Text                 = "-"
+MinimizeButton.Font                 = Enum.Font.GothamMedium
+MinimizeButton.TextSize             = 24
+MinimizeButton.TextColor3           = ACCENT
+MinimizeButton.Parent               = MainFrame
+
+-- ─────────────────────────────────────────────
+--  SETTINGS (GEAR) BUTTON
+-- ─────────────────────────────────────────────
+local GearButton = Instance.new("TextButton")
+GearButton.Name                 = "GearButton"
+GearButton.Size                 = UDim2.new(0, 24, 0, 24)
+GearButton.Position             = UDim2.new(1, -64, 0, 9)
+GearButton.BackgroundColor3     = Color3.new(0.0470588, 0.101961, 0.227451)
+GearButton.BorderSizePixel      = 0
+GearButton.Text                 = ""
+GearButton.ZIndex               = 2
+GearButton.Parent               = MainFrame
+
+local GearCorner = Instance.new("UICorner")
+GearCorner.CornerRadius = UDim.new(1, 0)
+GearCorner.Parent = GearButton
+
+local GearStroke = Instance.new("UIStroke")
+GearStroke.Color        = ACCENT
+GearStroke.Transparency = 0.5
+GearStroke.Thickness    = 1.2
+GearStroke.Parent       = GearButton
+
+-- Three dots icon inside gear button (3x3 dots stacked)
+for i, yOff in ipairs({5, 10, 15}) do
+    local dot = Instance.new("Frame")
+    dot.Size                = UDim2.new(0, 3, 0, 3)
+    dot.Position            = UDim2.new(0.5, -1, 0, yOff)
+    dot.BackgroundColor3    = ACCENT
+    dot.ZIndex              = 3
+    dot.BorderSizePixel     = 0
+    dot.Parent              = GearButton
+    local dc = Instance.new("UICorner")
+    dc.CornerRadius = UDim.new(1, 0)
+    dc.Parent = dot
+end
+
+-- ─────────────────────────────────────────────
+--  SEPARATOR LINE
+-- ─────────────────────────────────────────────
+local Separator = Instance.new("Frame")
+Separator.Name                = "Separator"
+Separator.Size                = UDim2.new(0, 75, 0, 2)
+Separator.Position            = UDim2.new(0, 16, 0, 34)
+Separator.BackgroundColor3    = ACCENT_SOFT
+Separator.BackgroundTransparency = 0.5
+Separator.BorderSizePixel     = 0
+Separator.Parent              = MainFrame
+
+-- ─────────────────────────────────────────────
+--  SLIDE PANEL (for animation, child of MainFrame)
+-- ─────────────────────────────────────────────
+local SlidePanel = Instance.new("Frame")
+SlidePanel.Name              = "SlidePanel"
+SlidePanel.Size              = UDim2.new(0.4, 0, 1, 0)
+SlidePanel.Position          = UDim2.new(-0.4, 0, 0, 0)
+SlidePanel.BackgroundColor3  = ACCENT_SOFT
+SlidePanel.BorderSizePixel   = 0
+SlidePanel.ZIndex            = 0
+SlidePanel.Parent            = MainFrame
+
+-- ─────────────────────────────────────────────
+--  INSTA RESET  SECTION
+-- ─────────────────────────────────────────────
+local ResetFrame = Instance.new("Frame")
+ResetFrame.Name                   = "ResetFrame"
+ResetFrame.Size                   = UDim2.new(0, 198, 0, 52)
+ResetFrame.Position               = UDim2.new(0.5, -99, 0, 58)
+ResetFrame.BackgroundColor3       = BG_DARK
+ResetFrame.BackgroundTransparency = 0.8
+ResetFrame.BorderSizePixel        = 0
+ResetFrame.Parent                 = MainFrame
+
+local ResetFrameCorner = Instance.new("UICorner")
+ResetFrameCorner.CornerRadius = UDim.new(0, 10)
+ResetFrameCorner.Parent = ResetFrame
+
+local InstaResetButton = Instance.new("TextButton")
+InstaResetButton.Name               = "InstaResetButton"
+InstaResetButton.Size               = UDim2.new(0, 190, 0, 46)
+InstaResetButton.Position           = UDim2.new(0.5, -95, 0, 61)
+InstaResetButton.BackgroundColor3   = BG_DARK
+InstaResetButton.BorderSizePixel    = 0
+InstaResetButton.Text               = "INSTA RESET"
+InstaResetButton.Font               = Enum.Font.GothamMedium
+InstaResetButton.TextSize           = 15
+InstaResetButton.TextColor3         = ACCENT
+InstaResetButton.AutoButtonColor    = false
+InstaResetButton.Parent             = MainFrame
+
+local InstaResetCorner = Instance.new("UICorner")
+InstaResetCorner.CornerRadius = UDim.new(0, 8)
+InstaResetCorner.Parent = InstaResetButton
+
+-- Status label below button (ACTIVE / DONE)
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Name                  = "StatusLabel"
+StatusLabel.Size                  = UDim2.new(1, 0, 0, 15)
+StatusLabel.Position              = UDim2.new(0, 0, 1, -22)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text                  = "ACTIVE"
+StatusLabel.Font                  = Enum.Font.GothamMedium
+StatusLabel.TextSize              = 11
+StatusLabel.TextColor3            = ACCENT_SOFT
+StatusLabel.TextTransparency      = 0.4
+StatusLabel.Parent                = MainFrame
+
+-- Discord watermark
+local DiscordLabel = Instance.new("TextLabel")
+DiscordLabel.Name                  = "DiscordLabel"
+DiscordLabel.Size                  = UDim2.new(1, 0, 0, 15)
+DiscordLabel.Position              = UDim2.new(0, 0, 1, -22)
+DiscordLabel.BackgroundTransparency = 1
+DiscordLabel.Text                  = "discord.gg/icehub"
+DiscordLabel.Font                  = Enum.Font.Gotham
+DiscordLabel.TextSize              = 11
+DiscordLabel.TextColor3            = ACCENT_SOFT
+DiscordLabel.TextTransparency      = 0.4
+DiscordLabel.Parent                = MainFrame
+
+-- ─────────────────────────────────────────────
+--  SETTINGS PANEL  (dropdown, anchored bottom-left of MainFrame)
+-- ─────────────────────────────────────────────
+local SettingsPanel = Instance.new("Frame")
+SettingsPanel.Name                = "SettingsPanel"
+SettingsPanel.AnchorPoint         = Vector2.new(0, 1)
+SettingsPanel.Size                = UDim2.new(0, 230, 0, 0)   -- starts collapsed
+SettingsPanel.Position            = UDim2.new(0, 0, 1, 0)
+SettingsPanel.BackgroundColor3    = BG_PANEL
+SettingsPanel.BorderSizePixel     = 0
+SettingsPanel.ZIndex              = 20
+SettingsPanel.ClipsDescendants    = true
+SettingsPanel.Visible             = false
+SettingsPanel.Parent              = MainFrame
+
+local SettingsStroke = Instance.new("UIStroke")
+SettingsStroke.Color        = ACCENT
+SettingsStroke.Transparency = 0.65
+SettingsStroke.Thickness    = 1
+SettingsStroke.Parent       = SettingsPanel
+
+local SettingsTitleLabel = Instance.new("TextLabel")
+SettingsTitleLabel.Size                  = UDim2.new(1, -16, 0, 20)
+SettingsTitleLabel.Position              = UDim2.new(0, 14, 0, 9)
+SettingsTitleLabel.BackgroundTransparency = 1
+SettingsTitleLabel.Text                  = "SETTINGS"
+SettingsTitleLabel.Font                  = Enum.Font.GothamMedium
+SettingsTitleLabel.TextSize              = 12
+SettingsTitleLabel.TextColor3            = ACCENT_SOFT
+SettingsTitleLabel.TextXAlignment        = Enum.TextXAlignment.Left
+SettingsTitleLabel.ZIndex                = 21
+SettingsTitleLabel.Parent                = SettingsPanel
+
+local SettingsSep = Instance.new("Frame")
+SettingsSep.Size                = UDim2.new(1, -28, 0, 1)
+SettingsSep.Position            = UDim2.new(0, 14, 0, 30)
+SettingsSep.BackgroundColor3    = ACCENT_SOFT
+SettingsSep.BackgroundTransparency = 0.78
+SettingsSep.BorderSizePixel     = 0
+SettingsSep.ZIndex              = 21
+SettingsSep.Parent              = SettingsPanel
+
+-- Toggle row: "Reset on Balloon"
+local ToggleRow = Instance.new("Frame")
+ToggleRow.Size                = UDim2.new(1, -18, 0, 40)
+ToggleRow.Position            = UDim2.new(0, 9, 0, 38)
+ToggleRow.BackgroundColor3    = BG_ITEM
+ToggleRow.BackgroundTransparency = 0.9
+ToggleRow.BorderSizePixel     = 0
+ToggleRow.ZIndex              = 21
+ToggleRow.Parent              = SettingsPanel
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size               = UDim2.new(1, -2, 1, -2)
+ToggleButton.Position           = UDim2.new(0, 1, 0, 1)
+ToggleButton.BackgroundColor3   = BG_ITEM
+ToggleButton.BorderSizePixel    = 0
+ToggleButton.Text               = ""
+ToggleButton.AutoButtonColor    = false
+ToggleButton.ZIndex             = 22
+ToggleButton.Parent             = ToggleRow
+
+local ToggleButtonCorner = Instance.new("UICorner")
+ToggleButtonCorner.CornerRadius = UDim.new(0, 7)
+ToggleButtonCorner.Parent = ToggleButton
+
+-- Toggle indicator dot
+local ToggleDot = Instance.new("Frame")
+ToggleDot.Size              = UDim2.new(0, 7, 0, 7)
+ToggleDot.Position          = UDim2.new(0, 12, 0.5, -3)
+ToggleDot.BackgroundColor3  = TOGGLE_OFF
+ToggleDot.BorderSizePixel   = 0
+ToggleDot.ZIndex            = 23
+ToggleDot.Parent            = ToggleButton
+
+local ToggleDotCorner = Instance.new("UICorner")
+ToggleDotCorner.CornerRadius = UDim.new(1, 0)
+ToggleDotCorner.Parent = ToggleDot
+
+local ToggleDotStroke = Instance.new("UIStroke")
+ToggleDotStroke.Transparency = 1
+ToggleDotStroke.Thickness    = 3
+ToggleDotStroke.Parent       = ToggleDot
+
+local ToggleLabel = Instance.new("TextLabel")
+ToggleLabel.Size                  = UDim2.new(1, -26, 1, 0)
+ToggleLabel.Position              = UDim2.new(0, 24, 0, 0)
+ToggleLabel.BackgroundTransparency = 1
+ToggleLabel.Text                  = "Reset on Balloon"
+ToggleLabel.Font                  = Enum.Font.GothamMedium
+ToggleLabel.TextSize              = 13
+ToggleLabel.TextColor3            = TEXT_DIM
+ToggleLabel.TextXAlignment        = Enum.TextXAlignment.Left
+ToggleLabel.ZIndex                = 23
+ToggleLabel.Parent                = ToggleButton
+
+-- Toggle state label (OFF / ON)
+local ToggleStateLabel = Instance.new("TextLabel")
+ToggleStateLabel.Size                  = UDim2.new(1, -18, 0, 13)
+ToggleStateLabel.Position              = UDim2.new(0, 14, 0, 81)
+ToggleStateLabel.BackgroundTransparency = 1
+ToggleStateLabel.Text                  = "OFF"
+ToggleStateLabel.Font                  = Enum.Font.Gotham
+ToggleStateLabel.TextSize              = 10
+ToggleStateLabel.TextColor3            = TEXT_OFF
+ToggleStateLabel.TextXAlignment        = Enum.TextXAlignment.Left
+ToggleStateLabel.ZIndex                = 21
+ToggleStateLabel.Parent                = SettingsPanel
+
+-- ─────────────────────────────────────────────
+--  STATE
+-- ─────────────────────────────────────────────
+local isMinimized        = false
+local settingsPanelOpen  = false
+local resetOnBalloon     = false
+local isDragging         = false
+local dragStartPos       = nil
+local frameStartPos      = nil
+
+-- ─────────────────────────────────────────────
+--  HELPER: perform the insta-reset action
+-- ─────────────────────────────────────────────
+local function DoInstaReset()
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- Freeze player
+    humanoid.WalkSpeed  = 0
+    humanoid.JumpPower  = 0
+    humanoid.AutoRotate = false
+    InstaResetButton.Text = "DONE"
+
+    -- Teleport to CraftingMachine
+    local craftPos = workspace:FindFirstChild("CraftingMachine")
+    if craftPos then
+        local vfxPart = craftPos:FindFirstChild("VFX")
+        if vfxPart then
+            local secret = vfxPart:FindFirstChild("Secret")
+            if secret then
+                local soundPart = secret:FindFirstChild("SoundPart")
+                if soundPart then
+                    character:PivotTo(CFrame.new(soundPart.Position))
+                end
+            end
+        end
+    end
+
+    -- Restore after short delay
+    task.delay(1.5, function()
+        if humanoid and humanoid.Parent then
+            humanoid.WalkSpeed  = 16
+            humanoid.JumpPower  = 50
+            humanoid.AutoRotate = true
+        end
+        InstaResetButton.Text = "INSTA RESET"
+        StatusLabel.Text = "ACTIVE"
+    end)
+end
+
+-- ─────────────────────────────────────────────
+--  MINIMIZE / RESTORE
+-- ─────────────────────────────────────────────
+local function SetMinimized(state)
+    isMinimized = state
+    local targetSizeY = state and 42 or 150
+    TweenService:Create(MainFrame, TWEEN_INFO_FAST, {
+        Size = UDim2.new(0, 230, 0, targetSizeY)
+    }):Play()
+    MainFrame.ClipsDescendants = true
+    MinimizeButton.Text = state and "+" or "-"
+end
+
+-- ─────────────────────────────────────────────
+--  SETTINGS PANEL  OPEN / CLOSE
+-- ─────────────────────────────────────────────
+local function SetSettingsPanel(open)
+    settingsPanelOpen = open
+    if open then
+        SettingsPanel.Visible = true
+        TweenService:Create(SettingsPanel, TWEEN_INFO_PANEL, {
+            Size = UDim2.new(0, 230, 0, 100)
+        }):Play()
+    else
+        local t = TweenService:Create(SettingsPanel, TWEEN_INFO_PANEL, {
+            Size = UDim2.new(0, 230, 0, 0)
+        })
+        t:Play()
+        t.Completed:Connect(function(state)
+            if state == Enum.PlaybackState.Completed then
+                SettingsPanel.Visible = false
+            end
+        end)
+    end
+end
+
+-- ─────────────────────────────────────────────
+--  TOGGLE: Reset on Balloon
+-- ─────────────────────────────────────────────
+local function SetToggle(value)
+    resetOnBalloon = value
+    if value then
+        ToggleDot.BackgroundColor3   = ACCENT
+        ToggleStateLabel.Text        = "ON"
+        ToggleStateLabel.TextColor3  = ACCENT_SOFT
+        ToggleDotStroke.Transparency = 0.4
+    else
+        ToggleDot.BackgroundColor3   = TOGGLE_OFF
+        ToggleStateLabel.Text        = "OFF"
+        ToggleStateLabel.TextColor3  = TEXT_OFF
+        ToggleDotStroke.Transparency = 1
+    end
+end
+
+-- ─────────────────────────────────────────────
+--  BUTTON HOVER EFFECTS
+-- ─────────────────────────────────────────────
+InstaResetButton.MouseEnter:Connect(function()
+    TweenService:Create(InstaResetButton, TWEEN_INFO_FAST, {
+        BackgroundColor3 = Color3.new(0.0470588, 0.101961, 0.227451)
+    }):Play()
+end)
+
+InstaResetButton.MouseLeave:Connect(function()
+    TweenService:Create(InstaResetButton, TWEEN_INFO_FAST, {
+        BackgroundColor3 = BG_DARK
+    }):Play()
+end)
+
+-- ─────────────────────────────────────────────
+--  BUTTON CLICK CONNECTIONS
+-- ─────────────────────────────────────────────
+InstaResetButton.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "ACTIVE"
+    DoInstaReset()
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    SetMinimized(not isMinimized)
+end)
+
+GearButton.MouseButton1Click:Connect(function()
+    SetSettingsPanel(not settingsPanelOpen)
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    SetToggle(not resetOnBalloon)
+end)
+
+-- ─────────────────────────────────────────────
+--  DRAG LOGIC
+-- ─────────────────────────────────────────────
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging    = true
+        dragStartPos  = input.Position
+        frameStartPos = MainFrame.Position
+    end
+end)
+
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not isDragging then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement
+    and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+    local delta = input.Position - dragStartPos
+    MainFrame.Position = UDim2.new(
+        frameStartPos.X.Scale,
+        frameStartPos.X.Offset + delta.X,
+        frameStartPos.Y.Scale,
+        frameStartPos.Y.Offset + delta.Y
+    )
+end)
+
+-- ─────────────────────────────────────────────
+--  BALLOON AUTO-RESET (when resetOnBalloon toggle is ON)
+-- ─────────────────────────────────────────────
+local function SetupBalloonDetect(character)
+    if not character then return end
+    character.DescendantAdded:Connect(function(desc)
+        if not resetOnBalloon then return end
+        -- Heuristic: if a "Balloon" tool or accessory is added, trigger reset
+        if desc.Name:lower():find("balloon") then
+            DoInstaReset()
+        end
+    end)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    SetupBalloonDetect(char)
+end)
+
+if LocalPlayer.Character then
+    SetupBalloonDetect(LocalPlayer.Character)
+end
+
+-- ─────────────────────────────────────────────
+--  INITIAL STATE
+-- ─────────────────────────────────────────────
+SetToggle(false)
+StatusLabel.Text = "ACTIVE"
