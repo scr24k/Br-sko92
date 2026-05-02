@@ -1,0 +1,58 @@
+local lp = game.Players.LocalPlayer
+local rs = game:GetService("RunService")
+local uis = game:GetService("UserInputService")
+local pos = Vector3.new(0.076, 99997.35, -0.517)
+
+local gui = Instance.new("ScreenGui", lp.PlayerGui)
+gui.Name = "ir_gui"
+gui.ResetOnSpawn = false
+
+local b = Instance.new("TextButton", gui)
+b.Size = UDim2.new(0, 160, 0, 45)
+b.Position = UDim2.new(0.5, -80, 0.8, 0)
+b.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+b.Text = "INSTA RESET"
+b.TextColor3 = Color3.new(1, 1, 1)
+b.Font = "Code"
+b.TextSize = 18
+Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+
+-- Minimalistisches Dragging (weniger "KI-Standard")
+local dragging, startPos, startInput
+b.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		startInput = i.Position
+		startPos = b.Position
+	end
+end)
+
+uis.InputChanged:Connect(function(i)
+	if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		local delta = i.Position - startInput
+		b.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+uis.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+-- Main Click
+b.MouseButton1Click:Connect(function()
+	local char = lp.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	local carpet = lp.Backpack:FindFirstChild("Flying Carpet")
+	if carpet then carpet.Parent = char end
+	
+	-- Instant TP & Physics Reset
+	for i = 1, 6 do
+		hrp.CFrame = CFrame.new(pos)
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		rs.PreSimulation:Wait()
+	end
+end)
